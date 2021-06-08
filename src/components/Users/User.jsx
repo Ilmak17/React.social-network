@@ -4,51 +4,42 @@ import userPhoto from "../../assets/images/img.png";
 import {NavLink} from "react-router-dom";
 import Paginator from "../../common/Paginator/Paginator";
 
-let Users = (props) => {
-
+let User = ({user, followingInProgress, unFollow, follow}) => {
     return (
         <div>
-            <Paginator currentPage={props.currentPage} onPageChanged={props.onPageChanged}
-                       totalUsersCount={props.totalUsersCount} pageSize={props.pageSize}/>
-            {
-                props.users.map(u => <div key={u.id}>
                     <span>
                         <div>
-                            <NavLink to={'/profile/' + u.id}>
-                                <img src={u.photos.small != null ? u.photos.small : userPhoto}
+                            <NavLink to={'/profile/' + user.id}>
+                                <img src={user.photos.small != null ? user.photos.small : userPhoto}
                                      alt="img" className={s.userPhoto}/>
                             </NavLink>
                         </div>
 
                         <div>
-                            {u.followed ?
-                                <button disabled={props.followingInProgress.some(id => id === u.id)}
+                            {user.followed ?
+                                <button disabled={followingInProgress.some(id => id === user.id)}
                                         onClick={() => {
-                                            props.unFollow(u.id)
+                                            unFollow(user.id)
                                         }}>Unfollow</button>
-
-
-                                : <button disabled={props.followingInProgress.some(id => id === u.id)} onClick={() => {
-                                    props.follow(u.id)
-
-                                }}>Follow</button>
+                                : <button disabled={followingInProgress.some(id => id === user.id)}
+                                          onClick={() => {
+                                              follow(user.id)
+                                          }}>Follow</button>
                             }
                         </div>
                     </span>
+            <span>
                     <span>
-                    <span>
-                        <div>{u.name}</div>
-                        <div>{u.status}</div>
+                        <div>{user.name}</div>
+                        <div>{user.status}</div>
                     </span>
                     <span>
                         <div>{"u.location.country"}</div>
                         <div>{"u.location.city"}</div>
                     </span>
-                </span>
-                </div>)
-            }
+            </span>
         </div>
     )
 }
 
-export default Users;
+export default User;

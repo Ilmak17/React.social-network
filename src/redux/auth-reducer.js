@@ -1,57 +1,33 @@
-const FOLLOW = 'FOLLOW';
-const UNFOLLOW = 'UNFOLLOW';
-const SET_USERS = 'SET_USERS';
-const SET_CURRENT_PAGE = 'SET_CURRENT_PAGE';
-const SET_TOTAL_USERS_COUNT = 'SET_TOTAL_USERS_COUNT';
-const TOGGLE_IS_FETCHING = 'TOGGLE_IS_FETCHING';
+import {authAPI, securityAPI} from "../api/api";
+import {stopSubmit} from "redux-form";
+
+const SET_USER_DATA = 'network/auth/SET_USER_DATA';
+const TOGGLE_IS_FETCHING = 'network/auth/TOGGLE_IS_FETCHING';
+const SET_CAPTCHA_URL_SUCCESS = 'network/auth/SET_CAPTCHA_URL_SUCCESS';
 
 let initialState = {
-    users: [ ],
-    pageSize: 5,
-    totalUsersCount: 0,
-    currentPage: 5,
-    isFetching: false
+    userId: null,
+    email: null,
+    login: null,
+    isFetching: false,
+    isAuth: false,
+    captchaUrl: null, // if null, then captcha is not required
 };
 
-const usersReducer = (state = initialState, action) => {
+const authReducer = (state = initialState, action) => {
     switch (action.type) {
-        case FOLLOW:
+        case SET_USER_DATA:
             return {
                 ...state,
-                // users: [...state.users]
-                users: state.users.map(u => {
-                    if (u.id === action.userId) {
-                        return {...u, followed: true}
-                    }
-                    return u;
-                })
+                ...action.payload,
             }
-
-        case UNFOLLOW:
-            return {
-                ...state,
-                users: state.users.map(u => {
-                    if (u.id === action.userId) {
-                        return {...u, followed: false}
-                    }
-                    return u;
-                })
-            }
-
-        case SET_USERS: {
-            return { ...state, users: action.users}
-        }
-
-        case SET_CURRENT_PAGE: {
-            return { ...state, currentPage: action.currentPage}
-        }
-
-        case SET_TOTAL_USERS_COUNT: {
-            return { ...state, totalUsersCount: action.count}
-        }
 
         case TOGGLE_IS_FETCHING: {
-            return { ...state, isFetching: action.isFetching}
+            return {...state, isFetching: action.isFetching}
+        }
+
+        case SET_CAPTCHA_URL_SUCCESS: {
+            return {...state, captchaUrl: action.captchaUrl}
         }
 
         default:
@@ -59,12 +35,56 @@ const usersReducer = (state = initialState, action) => {
     }
 }
 
+export const setAuthUserData = (userId, email, login, isAuth) => ({
+    type: SET_USER_DATA,
+    payload: {userId, email, login, isAuth}
+})
+export const setToggleIsFetching = (isFetching) => ({type: TOGGLE_IS_FETCHING, isFetching})
+export const setCaptcha = (captchaUrl) => ({type: SET_CAPTCHA_URL_SUCCESS, captchaUrl})
 
-export const follow = (userId) => ({type: FOLLOW, userId})
-export const unFollow = (userId) => ({type: UNFOLLOW, userId})
-export const setUsers = (users) => ({type: SET_USERS, users})
-export const setCurrentPage = (currentPage) => ({type: SET_CURRENT_PAGE, currentPage})
-export const setUsersTotalCount = (totalUsersCount) => ({type: SET_TOTAL_USERS_COUNT, count: totalUsersCount})
-export const setToggleIsFetching = (isFetching) => ({type:TOGGLE_IS_FETCHING, isFetching})
+export const getAuthUserData = () => {
+    return async (dispatch) => {
+        dispatch(setToggleIsFetching(true));
+        const response = await authAPI.me()
+        if (response.data.resultCode === 0) {
+            let {id, login, email} = response.data.data;
+            dispatch(setAuthUserData(id, email, login, true));
+        }
+    }
+}
 
-export default usersReducer;
+export const login = (email, password, rememberMe, captcha) => {
+    return async (dispatch) => {
+        dispatch(setToggleIsFetching(true));
+        const response = await authAPI.login(email, password, rememberMe, captcha)
+        if (response.data.resultCode === 0) {
+            // success, get auth data
+            dispatch(getAuthUserData());
+        } else {
+            if (response.data.resultCode === 10) {
+                dispatch(getCaptchaUrl());
+            }
+            let message = response.data.messages.length > 0 ? response.data.messages[0] : "Some error";
+            dispatch(stopSubmit("login", {_error: message}));
+        }
+    }
+}
+
+export const logout = () => {
+    return async (dispatch) => {
+        dispatch(setToggleIsFetching(true));
+        const response = await authAPI.logout()
+        if (response.data.resultCode === 0) {
+            dispatch(setAuthUserData(null, null, null, false));
+        }
+    }
+}
+
+export const getCaptchaUrl = () => {
+    return async (dispatch) => {
+        const response = await securityAPI.getCaptchaUrl();
+        dispatch(setCaptcha(response.data.url));
+    }
+}
+
+export default authReducer;

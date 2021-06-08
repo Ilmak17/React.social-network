@@ -1,10 +1,13 @@
-.userPhoto {
-    width: 100px;
-    height: 100px;
-    border-radius: 50%;
+
+.paginator {
+    margin: 10px;
+}
+.pageNumber {
+    padding: 2px;
+    border: 1px solid grey;
 }
 
-.selectedPage {
-    font-weight: 700;
-    font-size: 20px;
+.pageNumber.selectedPage {
+    font-weight: bold;
+    border-color: black;
 }
